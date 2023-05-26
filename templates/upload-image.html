@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Загрузка изображения</title>
+  </head>
+  <body>
+    <h1>Загрузите изображение</h1>
+    <form method="POST" enctype="multipart/form-data" action="/image/upload">
+      <input type="file" name="image">
+    <div>
+        <label for="{{ form.float_number.id }}">Введите масштаб:</label>
+        {{ form.float_number }}
+    </div>
+      <input type="submit" value="Загрузить">
+    </form>
+  </body>
+</html>

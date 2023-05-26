@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Лабораторная 3</title>
+  </head>
+  <body>
+
+    <h1>Введите капчу,чтобы продолжить</h1>
+    <form method="POST" action="/">
+        {{ form.hidden_tag() }}
+        {{ form.recaptcha() }}
+        {{ form.submit() }}
+    </form>
+  </body>
+
+</html>

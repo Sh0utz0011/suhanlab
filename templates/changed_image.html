@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1>Изменённые изображения</h1>
+    <img src='{{ url_for('static', filename='changed/resized_' + filename) }}' alt='freedickcack' height="300px" width="300px">
+
+    <img src='{{ url_for('static', filename='graph/'+ graph_name) }}' alt='freedickcack' height="300px" width="370x">
+</body>
+</html>
