@@ -5,10 +5,11 @@ from werkzeug.utils import secure_filename
 import numpy as np
 from forms import MyForm,FloatForm
 import matplotlib.pyplot as plt
-import tkinter as tk
+import datetime
+from flask import url_for
 
 app = Flask(__name__, static_folder='static')
-app.config['UPLOAD_FOLDER'] = 'upload'
+app.config['UPLOAD_FOLDER'] = 'static/upload'
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['RECAPTCHA_PUBLIC_KEY'] = '6Lcmtj8mAAAAAPhfPRtEI1gGg6oqH0Gw0wmZ6e1N'
 app.config['RECAPTCHA_PRIVATE_KEY'] = '6Lcmtj8mAAAAABcRIZWb0SMl4C0Fjx6s4Jw7UN46'
@@ -51,13 +52,45 @@ def upload():
 
         # Выполняем необходимые операции с изображением
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
         image_changed_path = "static/changed"
         # Обработка изображения
         resize_image(image_path, filename, image_changed_path, scale=number)
-        graname = filename.split('.')[0] + "_graph.png"
-        plot_color_distribution(image_path, graname)
-        return render_template("changed_image.html", filename=filename, graph_name=graname)
+
+        # Сохраняем измененное изображение и строим графики
+        changed_filename = f"changed_{filename}"
+        changed_image_path = image_changed_path+"/resized_"+filename
+
+        orig_graph_name = f"{filename.split('.')[0]}_graph.png"
+        plot_color_distribution(image_path, orig_graph_name)
+        changed_graph_name = f"{changed_filename.split('.')[0]}_graph.png"
+        plot_color_distribution(changed_image_path, changed_graph_name)
+
+        # Вычисляем разницу между гистограммами и строим график разности
+        orig_hist = np.histogram(np.array(Image.open(image_path))[:, :, 0:3].ravel(), bins=256, range=(0, 256))[0]
+        changed_hist = \
+        np.histogram(np.array(Image.open(changed_image_path))[:, :, 0:3].ravel(), bins=256, range=(0, 256))[0]
+        hist_diff = orig_hist - changed_hist
+        plt.figure(figsize=(10, 6))
+        plt.title('Color Distribution Difference')
+        plt.xlabel('Color Intensity')
+        plt.ylabel('Frequency Difference')
+        plt.xlim(0, 255)
+        plt.plot(hist_diff, color='black')
+        plt.savefig(f"static/graph/diff_{filename}", dpi=300, bbox_inches='tight')
+        plt.close()
+
+        # Получаем текущее время
+        now = datetime.datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+
+        # Возвращаем шаблон с изображениями и временем загрузки
+        return render_template("changed_image.html",
+                               filename=filename,
+                               graph_name=orig_graph_name,
+                               changed_filename=changed_filename,
+                               changed_graph_name=changed_graph_name,
+                               diff_graph_name=f"diff_{filename}",
+                               current_time=current_time)
     else:
         return 'Недопустимый файл'
 
@@ -101,6 +134,38 @@ def plot_color_distribution(image_path,name):
 
     plt.savefig(f"static/graph/{name}", dpi=300, bbox_inches='tight')
     plt.close()
+def plot_color_diff(image_path, changed_path, name):
+    # Загрузка изображений с помощью Pillow
+    image = Image.open(image_path)
+    changed_image = Image.open(changed_path)
+
+    # Преобразование изображений в массивы NumPy
+    image_array = np.array(image)
+    changed_image_array = np.array(changed_image)
+
+    # Вычисление гистограмм распределения цветов для исходного и обработанного изображений
+    red_hist = np.histogram(image_array[:, :, 0], bins=256, range=(0, 256))
+    green_hist = np.histogram(image_array[:, :, 1], bins=256, range=(0, 256))
+    blue_hist = np.histogram(image_array[:, :, 2], bins=256, range=(0, 256))
+    changed_red_hist = np.histogram(changed_image_array[:, :, 0], bins=256, range=(0, 256))
+    changed_green_hist = np.histogram(changed_image_array[:, :, 1], bins=256, range=(0, 256))
+    changed_blue_hist = np.histogram(changed_image_array[:, :, 2], bins=256, range=(0, 256))
+
+    # Вычисление разности гистограмм распределения цветов
+    red_diff = red_hist[0] - changed_red_hist[0]
+    green_diff = green_hist[0] - changed_green_hist[0]
+    blue_diff = blue_hist[0] - changed_blue_hist[0]
+
+    # Рисование графика разности распределения цветов
+    plt.figure(figsize=(10, 6))
+    plt.title('Color Distribution Difference')
+    plt.xlabel('Color Intensity')
+    plt.ylabel('Frequency Difference')
+    plt.xlim(0, 255)
+    plt.plot(red_hist[1][:-1], red_diff, color='red', label='Red')
+    plt.plot(green_hist[1][:-1], green_diff, color='green', label='Green')
+    plt.plot(blue_hist[1][:-1], blue_diff, color='blue', label='Blue')
+    plt.legend()
 
 if __name__ == '__main__':
     app.config['UPLOAD_FOLDER'] = 'upload'
